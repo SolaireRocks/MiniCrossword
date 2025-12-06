@@ -537,7 +537,6 @@ function handleCellClick(r, c) {
         activeRow = r;
         activeCol = c;
         // Check empty only if the user clicks a cell that is already filled
-        // (If they click an empty cell, they probably want that specific one)
         if (currentGrid[r][c] !== '') {
             shouldCheckEmpty = true;
         }
@@ -570,12 +569,15 @@ function navigate(rowDelta, colDelta) {
     }
 }
 
+// Updated MoveFocus to skip filled cells when typing (moving forward)
 function moveFocus(step) {
     let r = activeRow;
     let c = activeCol;
-    let loops = 0;
+    let found = false;
     
-    while(loops < 10) {
+    // Safety loop to find next valid cell
+    let moves = 0;
+    while (moves < 26) {
         if (direction === 'across') {
             c += step;
             if (c > 4) { c = 0; r++; } 
@@ -586,6 +588,54 @@ function moveFocus(step) {
             else if (r < 0) { r = 4; c--; }
         }
         
+        if(r > 4) r = 0; if(r < 0) r = 4;
+        if(c > 4) c = 0; if(c < 0) c = 4;
+
+        moves++;
+
+        if (dailyPuzzle.solution[r][c] !== '#') {
+            // If moving forward (typing), look for EMPTY cell
+            if (step > 0) {
+                if (currentGrid[r][c] === '') {
+                    activeRow = r;
+                    activeCol = c;
+                    found = true;
+                    break;
+                }
+            } 
+            // If moving backward (backspace), just stop at first valid cell
+            else {
+                activeRow = r;
+                activeCol = c;
+                found = true;
+                break;
+            }
+        }
+    }
+
+    // Fallback: If no empty cell found forward (grid full or wrapped),
+    // we must move to immediate next cell so cursor isn't stuck.
+    if (step > 0 && !found) {
+        simpleMove(1);
+    } else {
+        updateHighlights();
+    }
+}
+
+function simpleMove(step) {
+    let r = activeRow;
+    let c = activeCol;
+    let loops = 0;
+    while (loops < 10) {
+            if (direction === 'across') {
+            c += step;
+            if (c > 4) { c = 0; r++; } 
+            else if (c < 0) { c = 4; r--; }
+        } else {
+            r += step;
+            if (r > 4) { r = 0; c++; } 
+            else if (r < 0) { r = 4; c--; }
+        }
         if(r > 4) r = 0; if(r < 0) r = 4;
         if(c > 4) c = 0; if(c < 0) c = 4;
 
