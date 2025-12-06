@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Updated viewport meta tag for better keyboard handling on mobile -->
+    <!-- Viewport settings: critical for handling mobile keyboard resizing behavior -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>Daily Mini Crossword</title>
     <!-- Google Fonts -->
@@ -25,8 +25,8 @@
         }
 
         html, body {
-            height: 100%; /* Critical for layout */
-            overflow: hidden; /* Prevent body scroll */
+            height: 100%;
+            overflow: hidden; /* Prevent scrolling of the body */
             overscroll-behavior: none;
         }
 
@@ -50,11 +50,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Changed to allow scrolling on small screens */
+            justify-content: flex-start;
             z-index: 200;
-            transition: opacity 0.3s ease-out, visibility 0.3s;
             padding: 40px 20px;
             overflow-y: auto;
+            transition: opacity 0.3s ease-out, visibility 0.3s;
         }
 
         .start-screen.hidden {
@@ -77,7 +77,6 @@
             font-size: 2rem;
             font-weight: 700;
             margin-bottom: 5px;
-            letter-spacing: -1px;
             text-align: center;
         }
 
@@ -99,14 +98,6 @@
             max-width: 300px;
         }
 
-        .user-edit-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-        }
-
         .user-avatar {
             width: 40px;
             height: 40px;
@@ -114,14 +105,6 @@
             object-fit: cover;
             margin-bottom: 5px;
             border: 2px solid #eee;
-        }
-
-        .input-label {
-            font-size: 0.7rem;
-            color: #888;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
         }
 
         .nickname-input {
@@ -148,7 +131,11 @@
             border-radius: 20px;
         }
         
-        .medal-item { display: flex; align-items: center; gap: 4px; }
+        .medal-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
 
         .google-btn {
             background-color: white;
@@ -172,6 +159,27 @@
             background: none;
             cursor: pointer;
             margin-top: 5px;
+        }
+
+        .primary-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .primary-btn:active {
+            transform: scale(0.98);
+        }
+
+        .big-btn {
+            font-size: 1.2rem;
+            padding: 16px 45px;
         }
 
         /* Leaderboard */
@@ -214,15 +222,15 @@
         .time-col { text-align: right; font-weight: 700; font-family: monospace; }
         .name-col { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 
-        /* --- Game UI Layout --- */
+        /* --- Game UI --- */
         .game-ui {
             opacity: 0;
             transition: opacity 0.3s ease-in;
             width: 100%;
-            height: 100%; /* Matches viewport */
+            height: 100%;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: hidden; /* Strict overflow control */
         }
 
         .game-ui.visible {
@@ -239,7 +247,6 @@
             align-items: center;
             border-bottom: 1px solid #eee;
             background: #fff;
-            z-index: 10;
         }
 
         .header-left h1 {
@@ -265,34 +272,26 @@
             text-align: center;
         }
 
-        /* Game Layout (Main Area) */
+        /* Main Game Layout */
         .game-layout {
-            flex-grow: 1; /* Takes available space */
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            background: #fff;
-            min-height: 0; /* Important for flex shrinking */
-        }
-
-        /* Board Wrapper - Centers board and allows scaling */
-        .board-wrapper {
             flex-grow: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: 10px;
+            justify-content: center; /* Center vertically */
+            background: #fff;
             width: 100%;
+            overflow: hidden;
         }
 
+        /* Board Container */
         .board-container {
-            width: 100%;
-            max-width: 380px; /* Keep it tight like NYT */
-            aspect-ratio: 1 / 1; /* Keeps it square */
+            width: 90%; /* Responsive width on mobile */
+            max-width: 360px;
+            aspect-ratio: 1 / 1;
             display: flex;
             justify-content: center;
-            /* Box shadow for depth */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .game-board {
@@ -313,7 +312,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* Responsive font size based on viewport width */
             font-size: clamp(1.2rem, 6vw, 2.2rem);
             font-weight: 700;
             text-transform: uppercase;
@@ -330,7 +328,6 @@
             position: absolute;
             top: 2px;
             left: 3px;
-            /* Responsive number size */
             font-size: clamp(0.6rem, 2.5vw, 0.8rem);
             font-weight: 600;
             color: #333;
@@ -338,22 +335,21 @@
             line-height: 1;
         }
 
-        /* Highlighting States */
         .cell.highlight-word {
             background-color: var(--highlight-blue);
         }
 
         .cell.active {
             background-color: var(--highlight-yellow);
-            z-index: 2; /* Keep active cell on top */
+            z-index: 2;
         }
 
-        /* Clues Container (Desktop View) */
+        /* IMPORTANT: Hide Clue Lists on Mobile */
         .clues-container {
-            display: none; /* Hidden by default on mobile */
+            display: none !important;
         }
 
-        /* Current Clue Bar (Mobile - Bottom) */
+        /* Mobile Clue Bar (Bottom) */
         .current-clue-bar {
             flex-shrink: 0;
             width: 100%;
@@ -364,7 +360,7 @@
             flex-direction: row;
             align-items: flex-start;
             justify-content: flex-start;
-            min-height: 85px; /* Minimum height for text */
+            min-height: 85px;
             max-height: 120px;
             overflow-y: auto;
             z-index: 20;
@@ -380,28 +376,6 @@
             font-weight: 800;
             margin-right: 8px;
             color: #000;
-        }
-
-        /* Buttons */
-        .primary-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-
-        .primary-btn:active {
-            transform: scale(0.98);
-        }
-
-        .big-btn {
-            font-size: 1.2rem;
-            padding: 16px 45px;
         }
 
         /* Victory Modal */
@@ -447,39 +421,32 @@
         .modal-stats { margin-bottom: 30px; }
         .final-time { font-size: 2.5rem; font-weight: 700; color: var(--text-color); margin-top: 5px; }
 
-        /* --- Desktop Responsive Adjustments --- */
+        /* --- Desktop View Adjustments --- */
         @media (min-width: 769px) {
-            .game-ui {
-                height: 100vh; /* Fixed height on desktop */
-                overflow: visible;
-            }
+            .game-ui { overflow: visible; }
 
             .game-layout {
-                flex-direction: row; /* Side-by-side */
+                flex-direction: row;
                 align-items: flex-start;
                 justify-content: center;
                 gap: 50px;
                 padding: 40px;
-            }
-
-            .board-wrapper {
-                flex-grow: 0;
-                width: auto;
-                align-items: flex-start;
-                padding: 0;
+                overflow: visible;
             }
 
             .board-container {
-                width: 400px; /* Fixed size on desktop */
+                width: 400px;
+                max-width: none;
                 box-shadow: none;
             }
 
             .current-clue-bar {
-                display: none; /* Hide mobile bar on desktop */
+                display: none; /* Hide mobile bar */
             }
 
+            /* Show Clue Lists on Desktop */
             .clues-container {
-                display: flex;
+                display: flex !important;
                 flex-direction: row;
                 gap: 40px;
                 width: 450px;
@@ -530,10 +497,9 @@
                 Sign in with Google
             </button>
             
-            <div id="user-display" class="user-edit-container hidden" style="display:none;">
+            <div id="user-display" class="auth-container hidden" style="display:none; width:100%;">
                 <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
                 
-                <label class="input-label">Leaderboard Name</label>
                 <input type="text" id="nickname-input" class="nickname-input" maxlength="15" placeholder="Enter Name">
                 
                 <div id="medal-counts" class="medal-counts" style="display:none;">
@@ -548,6 +514,7 @@
 
         <button id="start-btn" class="primary-btn big-btn">Start Puzzle</button>
 
+        <!-- Leaderboard Section -->
         <div class="leaderboard-container">
             <h3>Top Times Today</h3>
             <table class="leaderboard-table">
@@ -565,7 +532,7 @@
         </div>
     </div>
 
-    <!-- Game UI -->
+    <!-- Game UI (Initially Hidden) -->
     <div id="game-ui" class="game-ui">
         <header>
             <div class="header-left">
@@ -578,29 +545,31 @@
         </header>
 
         <main class="game-layout">
-            <!-- Board Wrapper helps center flex items -->
-            <div class="board-wrapper">
-                <div class="board-container">
-                    <div id="game-board" class="game-board">
-                        <!-- Grid generated by JS -->
-                    </div>
+            <!-- The Grid -->
+            <div class="board-container">
+                <div id="game-board" class="game-board">
+                    <!-- Grid cells generated by JS -->
                 </div>
             </div>
 
-            <!-- Clues (Desktop) -->
+            <!-- Clues Section (HIDDEN ON MOBILE via CSS) -->
             <div class="clues-container">
                 <div class="clue-column">
                     <h3>Across</h3>
-                    <ul id="across-clues" class="clue-list"></ul>
+                    <ul id="across-clues" class="clue-list">
+                        <!-- Clues generated by JS -->
+                    </ul>
                 </div>
                 <div class="clue-column">
                     <h3>Down</h3>
-                    <ul id="down-clues" class="clue-list"></ul>
+                    <ul id="down-clues" class="clue-list">
+                        <!-- Clues generated by JS -->
+                    </ul>
                 </div>
             </div>
         </main>
 
-        <!-- Mobile Clue Bar (Bottom) -->
+        <!-- Current Clue Bar (Mobile - Bottom) -->
         <div class="current-clue-bar" id="current-clue-bar">
             <span id="active-clue-text">Select a cell to start</span>
         </div>
@@ -622,24 +591,24 @@
         </div>
     </div>
 
-    <!-- Mobile Viewport Adjustment Script -->
-    <!-- This ensures the UI resizes correctly when the keyboard opens on mobile -->
+    <!-- Script to handle Mobile Keyboard Resizing -->
     <script>
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', () => {
                 const gameUI = document.getElementById('game-ui');
+                // Only run this if the game is actually visible
                 if(!gameUI.classList.contains('visible')) return;
                 
-                // Adjust height to match the visible area above keyboard
+                // Adjust height to match the visible viewport (which shrinks when keyboard opens)
                 gameUI.style.height = `${window.visualViewport.height}px`;
                 
-                // Scroll to top to prevent layout shift artifacts
+                // Scroll to top to ensure header stays pinned
                 window.scrollTo(0, 0);
             });
         }
     </script>
 
-    <!-- Main Logic -->
+    <!-- Load Script as Module -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
