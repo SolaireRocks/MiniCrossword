@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport settings: critical for handling mobile keyboard resizing behavior -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Mini Crossword</title>
-    <!-- Google Fonts -->
+    <!-- Google Fonts for a modern look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -15,19 +14,14 @@
             --border-color: #333;
             --bg-color: #fff;
             --text-color: #121212;
-            --clue-bg: #f8f9fa;
+            --clue-bg: #f8f8f8;
+            --cell-size: 60px;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-        }
-
-        html, body {
-            height: 100%;
-            overflow: hidden; /* Prevent scrolling of the body */
-            overscroll-behavior: none;
         }
 
         body {
@@ -37,6 +31,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* --- Start Screen --- */
@@ -45,16 +41,16 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 100vh;
             background-color: var(--bg-color);
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             z-index: 200;
-            padding: 40px 20px;
-            overflow-y: auto;
             transition: opacity 0.3s ease-out, visibility 0.3s;
+            padding: 20px;
+            overflow-y: auto;
         }
 
         .start-screen.hidden {
@@ -64,7 +60,7 @@
         }
 
         .logo-mark {
-            font-size: 5rem;
+            font-size: 6rem;
             line-height: 1;
             font-weight: 900;
             margin-bottom: 10px;
@@ -74,14 +70,15 @@
         }
 
         .start-title {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
             text-align: center;
         }
 
         .start-date {
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: #666;
             margin-bottom: 30px;
             font-weight: 500;
@@ -89,13 +86,21 @@
 
         /* Auth Styles */
         .auth-container {
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 10px;
             width: 100%;
             max-width: 300px;
+        }
+
+        .user-edit-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
         }
 
         .user-avatar {
@@ -105,6 +110,14 @@
             object-fit: cover;
             margin-bottom: 5px;
             border: 2px solid #eee;
+        }
+
+        .input-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
         }
 
         .nickname-input {
@@ -117,8 +130,17 @@
             text-align: center;
             width: 100%;
             background-color: #f9f9f9;
+            transition: all 0.2s;
         }
 
+        .nickname-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        /* Medal Counts */
         .medal-counts {
             display: flex;
             gap: 15px;
@@ -151,6 +173,10 @@
             transition: background 0.2s;
         }
 
+        .google-btn:hover {
+            background-color: #f8f8f8;
+        }
+
         .sign-out-btn {
             font-size: 0.8rem;
             color: #666;
@@ -161,42 +187,20 @@
             margin-top: 5px;
         }
 
-        .primary-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 1rem;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: transform 0.1s;
-        }
-
-        .primary-btn:active {
-            transform: scale(0.98);
-        }
-
-        .big-btn {
-            font-size: 1.2rem;
-            padding: 16px 45px;
-        }
-
         /* Leaderboard */
         .leaderboard-container {
             width: 100%;
             max-width: 400px;
-            margin-top: 20px;
+            margin-top: 30px;
             border-top: 1px solid #eee;
             padding-top: 20px;
-            padding-bottom: 40px;
         }
 
         .leaderboard-container h3 {
             text-align: center;
             margin-bottom: 15px;
             text-transform: uppercase;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             letter-spacing: 1px;
             color: #666;
         }
@@ -214,7 +218,7 @@
         }
 
         .leaderboard-table td {
-            padding: 8px;
+            padding: 10px 8px;
             border-bottom: 1px solid #eee;
         }
 
@@ -222,15 +226,14 @@
         .time-col { text-align: right; font-weight: 700; font-family: monospace; }
         .name-col { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 
-        /* --- Game UI --- */
+        /* --- Game UI (Hidden initially) --- */
         .game-ui {
             opacity: 0;
-            transition: opacity 0.3s ease-in;
+            transition: opacity 0.5s ease-in;
             width: 100%;
-            height: 100%;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Strict overflow control */
+            align-items: center;
         }
 
         .game-ui.visible {
@@ -239,80 +242,76 @@
 
         /* Header */
         header {
-            flex-shrink: 0;
             width: 100%;
-            padding: 10px 20px;
+            max-width: 900px;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #eee;
-            background: #fff;
+            margin-bottom: 20px;
         }
 
         .header-left h1 {
-            font-size: 1.4rem;
-            font-weight: 800;
-            letter-spacing: -0.5px;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -1px;
         }
 
         .date {
-            font-size: 0.75rem;
+            font-size: 0.9rem;
             color: #666;
             font-weight: 600;
         }
 
         .timer-container {
-            font-family: monospace;
-            font-size: 1.1rem;
+            font-family: 'Inter', monospace;
+            font-size: 1.2rem;
             font-weight: 600;
-            background: #f0f0f0;
-            padding: 6px 14px;
+            background: #eee;
+            padding: 8px 16px;
             border-radius: 20px;
-            min-width: 70px;
+            min-width: 80px;
             text-align: center;
         }
 
-        /* Main Game Layout */
+        /* Main Layout */
         .game-layout {
-            flex-grow: 1;
+            display: flex;
+            flex-direction: row; /* Side by side on desktop */
+            gap: 40px;
+            padding: 20px;
+            max-width: 1000px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* Game Board */
+        .board-container {
+            flex-shrink: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Center vertically */
-            background: #fff;
-            width: 100%;
-            overflow: hidden;
-        }
-
-        /* Board Container */
-        .board-container {
-            width: 90%; /* Responsive width on mobile */
-            max-width: 360px;
-            aspect-ratio: 1 / 1;
-            display: flex;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .game-board {
             display: grid;
-            width: 100%;
-            height: 100%;
-            grid-template-columns: repeat(5, 1fr);
-            grid-template-rows: repeat(5, 1fr);
+            grid-template-columns: repeat(5, var(--cell-size));
+            grid-template-rows: repeat(5, var(--cell-size));
+            gap: 0;
             border: 2px solid var(--primary-color);
-            background: var(--primary-color);
-            gap: 1px;
+            background: var(--primary-color); /* Grid lines color */
         }
 
         .cell {
             background-color: white;
             position: relative;
             cursor: pointer;
+            border: 1px solid #ccc;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: clamp(1.2rem, 6vw, 2.2rem);
+            font-size: 1.6rem;
             font-weight: 700;
             text-transform: uppercase;
             user-select: none;
@@ -327,55 +326,95 @@
         .cell-number {
             position: absolute;
             top: 2px;
-            left: 3px;
-            font-size: clamp(0.6rem, 2.5vw, 0.8rem);
+            left: 2px;
+            font-size: 0.7rem;
             font-weight: 600;
             color: #333;
             pointer-events: none;
-            line-height: 1;
         }
 
+        /* Highlighting States */
         .cell.highlight-word {
             background-color: var(--highlight-blue);
         }
 
         .cell.active {
             background-color: var(--highlight-yellow);
-            z-index: 2;
         }
 
-        /* IMPORTANT: Hide Clue Lists on Mobile */
+        /* Clues Section */
         .clues-container {
-            display: none !important;
+            flex-grow: 1;
+            display: flex;
+            gap: 30px;
+            max-width: 500px;
         }
 
-        /* Mobile Clue Bar (Bottom) */
-        .current-clue-bar {
-            flex-shrink: 0;
-            width: 100%;
-            background: var(--clue-bg);
-            border-top: 1px solid #ddd;
-            padding: 15px 20px;
-            display: flex;
-            flex-direction: row;
-            align-items: flex-start;
-            justify-content: flex-start;
-            min-height: 85px;
-            max-height: 120px;
-            overflow-y: auto;
-            z-index: 20;
+        .clue-column {
+            flex: 1;
         }
-        
-        #active-clue-text {
-            font-size: 1rem;
+
+        .clue-column h3 {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .clue-list {
+            list-style: none;
+        }
+
+        .clue-item {
+            padding: 8px 10px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95rem;
             line-height: 1.4;
-            color: #222;
+            transition: background 0.2s;
         }
-        
-        #active-clue-text strong {
-            font-weight: 800;
+
+        .clue-item strong {
             margin-right: 8px;
-            color: #000;
+            font-weight: 700;
+        }
+
+        .clue-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .clue-item.active {
+            background-color: var(--highlight-blue);
+        }
+
+        /* Mobile Clue Bar (Hidden on Desktop) */
+        .current-clue-bar {
+            display: none;
+        }
+
+        /* Buttons */
+        .primary-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .primary-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .big-btn {
+            font-size: 1.2rem;
+            padding: 18px 50px;
         }
 
         /* Victory Modal */
@@ -385,11 +424,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.9);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 300;
+            z-index: 100;
             opacity: 1;
             transition: opacity 0.3s;
         }
@@ -401,13 +440,12 @@
 
         .modal {
             background: white;
-            padding: 30px;
+            padding: 40px;
             border-radius: 12px;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
             border: 1px solid #eee;
-            width: 90%;
-            max-width: 350px;
+            min-width: 300px;
             transform: translateY(0);
             transition: transform 0.3s;
         }
@@ -416,64 +454,87 @@
             transform: translateY(20px);
         }
 
-        .medal-reveal { font-size: 3rem; margin-bottom: 10px; }
-        .medal-text { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: #555; }
-        .modal-stats { margin-bottom: 30px; }
-        .final-time { font-size: 2.5rem; font-weight: 700; color: var(--text-color); margin-top: 5px; }
+        .modal h2 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .medal-reveal {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            animation: popIn 0.5s ease-out;
+        }
+        
+        .medal-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #555;
+        }
 
-        /* --- Desktop View Adjustments --- */
-        @media (min-width: 769px) {
-            .game-ui { overflow: visible; }
+        .modal-stats {
+            margin-bottom: 30px;
+        }
+
+        .final-time {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-top: 5px;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            :root {
+                --cell-size: 13vw;
+            }
 
             .game-layout {
-                flex-direction: row;
-                align-items: flex-start;
-                justify-content: center;
-                gap: 50px;
-                padding: 40px;
-                overflow: visible;
+                flex-direction: column;
+                align-items: center;
+                padding-top: 0;
             }
 
-            .board-container {
-                width: 400px;
-                max-width: none;
-                box-shadow: none;
-            }
-
-            .current-clue-bar {
-                display: none; /* Hide mobile bar */
-            }
-
-            /* Show Clue Lists on Desktop */
             .clues-container {
-                display: flex !important;
-                flex-direction: row;
-                gap: 40px;
-                width: 450px;
-                height: 400px;
-                overflow-y: auto;
+                display: none;
             }
 
-            .clue-column { flex: 1; }
-            .clue-column h3 {
-                font-size: 1rem;
-                text-transform: uppercase;
-                border-bottom: 2px solid #000;
-                padding-bottom: 10px;
-                margin-bottom: 15px;
-            }
-
-            .clue-item {
-                padding: 8px 10px;
-                margin-bottom: 5px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.95rem;
+            /* Static Clue Bar under puzzle */
+            .current-clue-bar {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                
+                width: 100%;
+                /* Constrain width to roughly the grid size + a bit padding */
+                max-width: 90vw; 
+                
+                /* Static height to prevent layout jumps */
+                min-height: 90px;
+                
+                margin-top: 20px;
+                padding: 15px;
+                
+                background-color: #f7f9fa;
+                border-top: 4px solid var(--highlight-blue);
+                border-radius: 8px;
+                
+                text-align: center;
+                font-size: 1.1rem;
                 line-height: 1.4;
+                color: #333;
             }
-
-            .clue-item:hover { background-color: #f0f0f0; }
-            .clue-item.active { background-color: var(--highlight-blue); }
+            
+            .start-title {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
@@ -497,11 +558,13 @@
                 Sign in with Google
             </button>
             
-            <div id="user-display" class="auth-container hidden" style="display:none; width:100%;">
+            <div id="user-display" class="user-edit-container hidden" style="display:none;">
                 <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
                 
+                <label class="input-label">Leaderboard Name</label>
                 <input type="text" id="nickname-input" class="nickname-input" maxlength="15" placeholder="Enter Name">
                 
+                <!-- Medal Counts -->
                 <div id="medal-counts" class="medal-counts" style="display:none;">
                     <div class="medal-item">🥇 <span id="gold-count">0</span></div>
                     <div class="medal-item">🥈 <span id="silver-count">0</span></div>
@@ -545,14 +608,19 @@
         </header>
 
         <main class="game-layout">
-            <!-- The Grid -->
+            <!-- The Grid and Mobile Clue Bar -->
             <div class="board-container">
                 <div id="game-board" class="game-board">
                     <!-- Grid cells generated by JS -->
                 </div>
+                
+                <!-- Current Clue Bar (Mobile view: Moved under puzzle, Static) -->
+                <div class="current-clue-bar" id="current-clue-bar">
+                    <span id="active-clue-text">Select a cell to start</span>
+                </div>
             </div>
 
-            <!-- Clues Section (HIDDEN ON MOBILE via CSS) -->
+            <!-- Clues Section (Desktop View) -->
             <div class="clues-container">
                 <div class="clue-column">
                     <h3>Across</h3>
@@ -568,11 +636,6 @@
                 </div>
             </div>
         </main>
-
-        <!-- Current Clue Bar (Mobile - Bottom) -->
-        <div class="current-clue-bar" id="current-clue-bar">
-            <span id="active-clue-text">Select a cell to start</span>
-        </div>
     </div>
 
     <!-- Victory Modal -->
@@ -591,24 +654,7 @@
         </div>
     </div>
 
-    <!-- Script to handle Mobile Keyboard Resizing -->
-    <script>
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                const gameUI = document.getElementById('game-ui');
-                // Only run this if the game is actually visible
-                if(!gameUI.classList.contains('visible')) return;
-                
-                // Adjust height to match the visible viewport (which shrinks when keyboard opens)
-                gameUI.style.height = `${window.visualViewport.height}px`;
-                
-                // Scroll to top to ensure header stays pinned
-                window.scrollTo(0, 0);
-            });
-        }
-    </script>
-
-    <!-- Load Script as Module -->
+    <!-- Load Script as Module for Firebase -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
