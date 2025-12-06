@@ -64,6 +64,8 @@ const currentDateEl = document.getElementById('current-date');
 const modal = document.getElementById('modal-overlay');
 const finalTimeEl = document.getElementById('final-time');
 const restartBtn = document.getElementById('restart-btn');
+const giveUpBtn = document.getElementById('give-up-btn');
+const feedbackMessageEl = document.getElementById('feedback-message');
 
 // Auth & Medals DOM
 const googleLoginBtn = document.getElementById('google-login-btn');
@@ -294,6 +296,8 @@ function startGame() {
     clearInterval(timerInterval);
     timerEl.textContent = "00:00";
     modal.classList.add('hidden');
+    giveUpBtn.style.display = 'block'; // Reset Give Up button visibility
+    feedbackMessageEl.classList.remove('visible'); // Clear feedback
 
     renderBoard();
     renderClues();
@@ -305,6 +309,32 @@ function startGame() {
     updateHighlights();
     startTimer();
     inputProxy.focus();
+}
+
+function giveUp() {
+    if (!confirm("Are you sure you want to give up? The solution will be revealed.")) {
+        return;
+    }
+
+    // Stop game state
+    isGameFinished = true;
+    stopTimer();
+
+    // Fill grid with solution
+    const solution = dailyPuzzle.solution;
+    for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+            if (solution[r][c] !== '#') {
+                currentGrid[r][c] = solution[r][c];
+            }
+        }
+    }
+    updateBoardUI();
+
+    // Update UI
+    feedbackMessageEl.textContent = "Solution Revealed";
+    feedbackMessageEl.classList.add('visible');
+    giveUpBtn.style.display = 'none'; // Hide button
 }
 
 function findStartingCell() {
@@ -447,6 +477,7 @@ inputProxy.addEventListener('keydown', (e) => {
                 currentGrid[activeRow][activeCol] = '';
                 updateBoardUI();
             }
+            checkWin(); // Check win on backspace too (to update error count if they fix it)
             break;
         case ' ':
             direction = direction === 'across' ? 'down' : 'across';
@@ -577,25 +608,41 @@ function activateClue(clueObj, type) {
 function checkWin() {
     let isComplete = true;
     let isCorrect = true;
+    let errorCount = 0;
 
     for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
             if (dailyPuzzle.solution[r][c] === '#') continue;
             const val = currentGrid[r][c];
             const sol = dailyPuzzle.solution[r][c];
-            if (val === '') isComplete = false;
-            if (val !== sol) isCorrect = false;
+            
+            if (val === '') {
+                isComplete = false;
+            } else if (val !== sol) {
+                isCorrect = false;
+                errorCount++;
+            }
         }
     }
 
-    if (isComplete && isCorrect) {
-        gameWon();
+    // Feedback Logic
+    if (isComplete) {
+        if (isCorrect) {
+            feedbackMessageEl.classList.remove('visible'); // Clear error msg
+            if (!isGameFinished) gameWon();
+        } else {
+            feedbackMessageEl.textContent = `${errorCount} incorrect letter${errorCount === 1 ? '' : 's'}`;
+            feedbackMessageEl.classList.add('visible');
+        }
+    } else {
+        feedbackMessageEl.classList.remove('visible');
     }
 }
 
 function gameWon() {
     isGameFinished = true;
     stopTimer();
+    giveUpBtn.style.display = 'none'; // Hide give up button
     finalTimeEl.textContent = timerEl.textContent;
     
     // Process Medal & Save
@@ -608,7 +655,7 @@ function gameWon() {
 
 document.addEventListener('click', (e) => {
     if (!startScreen.classList.contains('hidden')) return;
-    if (!modal.contains(e.target) && !e.target.classList.contains('primary-btn') && !e.target.classList.contains('nickname-input')) {
+    if (!modal.contains(e.target) && !e.target.classList.contains('primary-btn') && !e.target.classList.contains('nickname-input') && !e.target.classList.contains('secondary-btn')) {
         if(isGameActive && !isGameFinished) inputProxy.focus();
     }
 });
@@ -622,5 +669,7 @@ restartBtn.addEventListener('click', () => {
         timerEl.textContent = "00:00";
     }, 500);
 });
+
+giveUpBtn.addEventListener('click', giveUp);
 
 initApp();
