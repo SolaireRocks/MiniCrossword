@@ -296,8 +296,8 @@ function startGame() {
     clearInterval(timerInterval);
     timerEl.textContent = "00:00";
     modal.classList.add('hidden');
-    giveUpBtn.style.display = 'block'; // Reset Give Up button visibility
-    feedbackMessageEl.classList.remove('visible'); // Clear feedback
+    giveUpBtn.style.display = 'block'; 
+    feedbackMessageEl.classList.remove('visible');
 
     renderBoard();
     renderClues();
@@ -316,11 +316,9 @@ function giveUp() {
         return;
     }
 
-    // Stop game state
     isGameFinished = true;
     stopTimer();
 
-    // Fill grid with solution
     const solution = dailyPuzzle.solution;
     for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
@@ -331,10 +329,9 @@ function giveUp() {
     }
     updateBoardUI();
 
-    // Update UI
     feedbackMessageEl.textContent = "Solution Revealed";
     feedbackMessageEl.classList.add('visible');
-    giveUpBtn.style.display = 'none'; // Hide button
+    giveUpBtn.style.display = 'none';
 }
 
 function findStartingCell() {
@@ -348,6 +345,44 @@ function findStartingCell() {
             }
         }
     }
+}
+
+// Helper: Find first empty cell in the active word
+function findFirstEmptyInWord(r, c, dir) {
+    const solution = dailyPuzzle.solution;
+    let currR = r;
+    let currC = c;
+
+    // 1. Rewind to start of word
+    if (dir === 'across') {
+        while (currC > 0 && solution[currR][currC - 1] !== '#') {
+            currC--;
+        }
+    } else {
+        while (currR > 0 && solution[currR - 1][currC] !== '#') {
+            currR--;
+        }
+    }
+
+    // 2. Scan forward for empty
+    if (dir === 'across') {
+        while (currC < 5 && solution[currR][currC] !== '#') {
+            if (currentGrid[currR][currC] === '') {
+                return [currR, currC];
+            }
+            currC++;
+        }
+    } else {
+        while (currR < 5 && solution[currR][currC] !== '#') {
+            if (currentGrid[currR][currC] === '') {
+                return [currR, currC];
+            }
+            currR++;
+        }
+    }
+
+    // 3. If no empty found, return original
+    return [r, c];
 }
 
 function renderBoard() {
@@ -397,8 +432,9 @@ function renderClues() {
         li.innerHTML = `<strong>${clue.number}</strong> ${clue.text}`;
         li.addEventListener('click', () => {
             direction = 'across';
-            activeRow = clue.row;
-            activeCol = clue.col;
+            const [nr, nc] = findFirstEmptyInWord(clue.row, clue.col, direction);
+            activeRow = nr;
+            activeCol = nc;
             updateHighlights();
             focusInput();
         });
@@ -412,8 +448,9 @@ function renderClues() {
         li.innerHTML = `<strong>${clue.number}</strong> ${clue.text}`;
         li.addEventListener('click', () => {
             direction = 'down';
-            activeRow = clue.row;
-            activeCol = clue.col;
+            const [nr, nc] = findFirstEmptyInWord(clue.row, clue.col, direction);
+            activeRow = nr;
+            activeCol = nc;
             updateHighlights();
             focusInput();
         });
@@ -477,22 +514,41 @@ inputProxy.addEventListener('keydown', (e) => {
                 currentGrid[activeRow][activeCol] = '';
                 updateBoardUI();
             }
-            checkWin(); // Check win on backspace too (to update error count if they fix it)
+            checkWin(); 
             break;
         case ' ':
             direction = direction === 'across' ? 'down' : 'across';
+            const [nr, nc] = findFirstEmptyInWord(activeRow, activeCol, direction);
+            activeRow = nr;
+            activeCol = nc;
             updateHighlights();
             break;
     }
 });
 
 function handleCellClick(r, c) {
+    let shouldCheckEmpty = false;
+    
     if (activeRow === r && activeCol === c) {
+        // Toggle direction if clicking active cell
         direction = direction === 'across' ? 'down' : 'across';
+        shouldCheckEmpty = true;
     } else {
         activeRow = r;
         activeCol = c;
+        // Check empty only if the user clicks a cell that is already filled
+        // (If they click an empty cell, they probably want that specific one)
+        if (currentGrid[r][c] !== '') {
+            shouldCheckEmpty = true;
+        }
     }
+
+    if (shouldCheckEmpty) {
+        const [nr, nc] = findFirstEmptyInWord(activeRow, activeCol, direction);
+        activeRow = nr;
+        activeCol = nc;
+    }
+
     updateHighlights();
     focusInput();
 }
@@ -625,10 +681,9 @@ function checkWin() {
         }
     }
 
-    // Feedback Logic
     if (isComplete) {
         if (isCorrect) {
-            feedbackMessageEl.classList.remove('visible'); // Clear error msg
+            feedbackMessageEl.classList.remove('visible');
             if (!isGameFinished) gameWon();
         } else {
             feedbackMessageEl.textContent = `${errorCount} incorrect letter${errorCount === 1 ? '' : 's'}`;
@@ -642,7 +697,7 @@ function checkWin() {
 function gameWon() {
     isGameFinished = true;
     stopTimer();
-    giveUpBtn.style.display = 'none'; // Hide give up button
+    giveUpBtn.style.display = 'none';
     finalTimeEl.textContent = timerEl.textContent;
     
     // Process Medal & Save
