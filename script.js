@@ -1,9 +1,28 @@
 import { dailyPuzzle } from './puzzle-data.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+import { 
+    getFirestore, 
+    collection, 
+    addDoc, 
+    query, 
+    where, 
+    orderBy, 
+    limit, 
+    getDocs, 
+    doc, 
+    getDoc, 
+    setDoc,
+    updateDoc,
+    increment 
+} from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-// --- Firebase Configuration ---
+// --- Configuration ---
+const MEDAL_THRESHOLDS = {
+    GOLD: 30,   // Seconds (0:30)
+    SILVER: 60  // Seconds (1:00)
+};
+
 const firebaseConfig = {
     apiKey: "AIzaSyArpjA7oxqiJD4YyCDmMxhL5LpdBUvxyfQ",
     authDomain: "mini-crossword-a1649.firebaseapp.com",
@@ -14,13 +33,12 @@ const firebaseConfig = {
     measurementId: "G-SN8LGRHSH8"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
-// --- Game State & Variables ---
+// --- Game State ---
 let currentUser = null;
 let currentGrid = Array(5).fill().map(() => Array(5).fill(''));
 let activeRow = 0;
@@ -47,13 +65,20 @@ const modal = document.getElementById('modal-overlay');
 const finalTimeEl = document.getElementById('final-time');
 const restartBtn = document.getElementById('restart-btn');
 
-// Auth DOM
+// Auth & Medals DOM
 const googleLoginBtn = document.getElementById('google-login-btn');
 const userDisplay = document.getElementById('user-display');
 const userAvatar = document.getElementById('user-avatar');
-const userName = document.getElementById('user-name');
 const signOutBtn = document.getElementById('sign-out-btn');
 const leaderboardBody = document.getElementById('leaderboard-body');
+const nicknameInput = document.getElementById('nickname-input');
+// New Elements
+const medalCountsEl = document.getElementById('medal-counts');
+const goldCountEl = document.getElementById('gold-count');
+const silverCountEl = document.getElementById('silver-count');
+const bronzeCountEl = document.getElementById('bronze-count');
+const modalMedalIcon = document.getElementById('modal-medal-icon');
+const modalMedalText = document.getElementById('modal-medal-text');
 
 // Mobile Keyboard Proxy
 const inputProxy = document.createElement('input');
@@ -65,14 +90,13 @@ inputProxy.style.width = '0';
 inputProxy.style.fontSize = '16px'; 
 document.body.appendChild(inputProxy);
 
-// --- 1. Authentication Logic ---
+// --- 1. Authentication & Profile Logic ---
 
 googleLoginBtn.addEventListener('click', async () => {
     try {
         await signInWithPopup(auth, googleProvider);
     } catch (error) {
         console.error("Login failed", error);
-        alert("Login failed. Check console for details.");
     }
 });
 
@@ -80,23 +104,68 @@ signOutBtn.addEventListener('click', () => {
     signOut(auth);
 });
 
-onAuthStateChanged(auth, (user) => {
-    currentUser = user;
-    if (user) {
-        googleLoginBtn.style.display = 'none';
-        userDisplay.style.display = 'flex'; // Changed to flex to align items
-        userAvatar.src = user.photoURL;
-        userName.textContent = user.displayName.split(' ')[0]; // First name only
-    } else {
-        googleLoginBtn.style.display = 'flex';
-        userDisplay.style.display = 'none';
+nicknameInput.addEventListener('change', async () => {
+    if (!currentUser) return;
+    const newName = nicknameInput.value.trim() || "Anonymous";
+    try {
+        await setDoc(doc(db, "users", currentUser.uid), {
+            nickname: newName,
+            lastUpdated: new Date()
+        }, { merge: true });
+    } catch (e) {
+        console.error("Error updating nickname:", e);
     }
 });
 
-// --- 2. Leaderboard Logic ---
+onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    if (user) {
+        googleLoginBtn.style.display = 'none';
+        userDisplay.style.display = 'flex';
+        userAvatar.src = user.photoURL;
+
+        // Fetch User Profile
+        const userRef = doc(db, "users", user.uid);
+        try {
+            const userSnap = await getDoc(userRef);
+            if (userSnap.exists()) {
+                const data = userSnap.data();
+                nicknameInput.value = data.nickname || user.displayName.split(' ')[0];
+                
+                // Update Medal Counts in UI
+                const medals = data.medals || { gold: 0, silver: 0, bronze: 0 };
+                goldCountEl.textContent = medals.gold || 0;
+                silverCountEl.textContent = medals.silver || 0;
+                bronzeCountEl.textContent = medals.bronze || 0;
+                medalCountsEl.style.display = 'flex';
+                
+            } else {
+                // First time setup
+                const defaultName = user.displayName.split(' ')[0];
+                nicknameInput.value = defaultName;
+                await setDoc(userRef, {
+                    nickname: defaultName,
+                    email: user.email,
+                    realName: user.displayName,
+                    medals: { gold: 0, silver: 0, bronze: 0 },
+                    createdAt: new Date()
+                });
+                medalCountsEl.style.display = 'flex';
+            }
+        } catch (e) {
+            console.error("Error fetching profile:", e);
+        }
+    } else {
+        googleLoginBtn.style.display = 'flex';
+        userDisplay.style.display = 'none';
+        medalCountsEl.style.display = 'none'; // Hide medals if logged out
+        nicknameInput.value = '';
+    }
+});
+
+// --- 2. Leaderboard & Score Logic ---
 
 function getTodayString() {
-    // Returns a consistent date string for the database (e.g., "February 15, 2024")
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return new Date().toLocaleDateString('en-US', options);
 }
@@ -114,7 +183,7 @@ async function fetchLeaderboard() {
         );
 
         const querySnapshot = await getDocs(q);
-        leaderboardBody.innerHTML = ''; // Clear loading
+        leaderboardBody.innerHTML = ''; 
 
         if (querySnapshot.empty) {
             leaderboardBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">No scores yet today. Be the first!</td></tr>`;
@@ -129,56 +198,96 @@ async function fetchLeaderboard() {
                 <td class="rank-col">${rank}</td>
                 <td class="name-col">
                     ${data.photoURL ? `<img src="${data.photoURL}" style="width:20px;height:20px;border-radius:50%;">` : ''}
-                    ${data.displayName.split(' ')[0]}
+                    ${data.displayName}
                 </td>
                 <td class="time-col">${data.timeString}</td>
             `;
             leaderboardBody.appendChild(row);
             rank++;
         });
-
     } catch (error) {
         console.error("Error fetching leaderboard:", error);
         leaderboardBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:red;">Error loading scores.</td></tr>`;
     }
 }
 
-async function saveScore() {
-    if (!currentUser) return; // Only save if logged in
+// Determine Medal and Update Profile
+async function processWin() {
+    // 1. Determine Medal Type
+    let medalType = 'bronze';
+    let medalText = 'Bronze';
+    let medalIcon = '🥉';
 
+    if (finalSeconds <= MEDAL_THRESHOLDS.GOLD) {
+        medalType = 'gold';
+        medalText = 'Gold';
+        medalIcon = '🥇';
+    } else if (finalSeconds <= MEDAL_THRESHOLDS.SILVER) {
+        medalType = 'silver';
+        medalText = 'Silver';
+        medalIcon = '🥈';
+    }
+
+    // 2. Update Modal UI
+    modalMedalIcon.textContent = medalIcon;
+    modalMedalText.innerHTML = `You got the <span style="color:var(--primary-color)">${medalText} Medal</span>!`;
+
+    // 3. Save Score & Update Medals (if logged in)
+    if (currentUser) {
+        saveScore(medalType);
+        updateUserMedals(medalType);
+    }
+}
+
+async function updateUserMedals(medalType) {
+    try {
+        const userRef = doc(db, "users", currentUser.uid);
+        // Atomic increment so we don't overwrite other data
+        await updateDoc(userRef, {
+            [`medals.${medalType}`]: increment(1)
+        });
+        
+        // Update local UI immediately for immediate feedback on restart
+        const countEl = document.getElementById(`${medalType}-count`);
+        if(countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
+        
+    } catch (e) {
+        console.error("Error updating medals:", e);
+    }
+}
+
+async function saveScore(medal) {
     const todayStr = getTodayString();
-    
+    let publicName = nicknameInput.value.trim() || "Anonymous";
+
     try {
         await addDoc(collection(db, "scores"), {
             uid: currentUser.uid,
-            displayName: currentUser.displayName,
+            displayName: publicName,
             photoURL: currentUser.photoURL,
             timeInSeconds: finalSeconds,
             timeString: finalTimeEl.textContent,
             date: todayStr,
+            medal: medal, // Save which medal they got with this specific score
+            realName: currentUser.displayName,
+            email: currentUser.email,
             timestamp: new Date()
         });
-        console.log("Score saved!");
     } catch (e) {
         console.error("Error adding score: ", e);
     }
 }
 
-// --- 3. Game Logic (Standard) ---
+// --- 3. Game Logic ---
 
 function initApp() {
     const todayStr = getTodayString();
-    
-    // Set date on both screens
     startDateDisplay.textContent = todayStr;
     currentDateEl.textContent = todayStr;
-
-    // Load Leaderboard
     fetchLeaderboard();
 }
 
 function startGame() {
-    // Reset State
     currentGrid = Array(5).fill().map(() => Array(5).fill(''));
     isGameActive = false;
     isGameFinished = false;
@@ -186,22 +295,15 @@ function startGame() {
     timerEl.textContent = "00:00";
     modal.classList.add('hidden');
 
-    // Render Game Elements
     renderBoard();
     renderClues();
 
-    // UI Transitions
     startScreen.classList.add('hidden');
     gameUI.classList.add('visible');
 
-    // Determine starting cell
     findStartingCell();
     updateHighlights();
-
-    // Start Timer Immediately
     startTimer();
-    
-    // Focus Input
     inputProxy.focus();
 }
 
@@ -496,37 +598,29 @@ function gameWon() {
     stopTimer();
     finalTimeEl.textContent = timerEl.textContent;
     
-    // SAVE SCORE TO FIREBASE
-    saveScore();
+    // Process Medal & Save
+    processWin();
 
     setTimeout(() => {
         modal.classList.remove('hidden');
     }, 300);
 }
 
-// --- Event Listeners ---
-
 document.addEventListener('click', (e) => {
     if (!startScreen.classList.contains('hidden')) return;
-    if (!modal.contains(e.target) && !e.target.classList.contains('primary-btn')) {
+    if (!modal.contains(e.target) && !e.target.classList.contains('primary-btn') && !e.target.classList.contains('nickname-input')) {
         if(isGameActive && !isGameFinished) inputProxy.focus();
     }
 });
 
 startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', () => {
-    // If we restart, we need to re-fetch leaderboard in case we just added our own score
     fetchLeaderboard();
-    
-    // Toggle UI back to start screen
     gameUI.classList.remove('visible');
     startScreen.classList.remove('hidden');
-    
-    // Wait a brief moment for transition then init
     setTimeout(() => {
         timerEl.textContent = "00:00";
     }, 500);
 });
 
-// Run on Load
 initApp();

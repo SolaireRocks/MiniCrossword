@@ -50,7 +50,7 @@
             z-index: 200;
             transition: opacity 0.3s ease-out, visibility 0.3s;
             padding: 20px;
-            overflow-y: auto; /* Allow scrolling if leaderboard is long */
+            overflow-y: auto;
         }
 
         .start-screen.hidden {
@@ -91,21 +91,72 @@
             flex-direction: column;
             align-items: center;
             gap: 10px;
+            width: 100%;
+            max-width: 300px;
         }
 
-        .user-info {
+        .user-edit-container {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            margin-bottom: 10px;
+            gap: 8px;
+            width: 100%;
         }
 
         .user-avatar {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             object-fit: cover;
+            margin-bottom: 5px;
+            border: 2px solid #eee;
+        }
+
+        .input-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .nickname-input {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            text-align: center;
+            width: 100%;
+            background-color: #f9f9f9;
+            transition: all 0.2s;
+        }
+
+        .nickname-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+
+        /* Medal Counts */
+        .medal-counts {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #555;
+            background: #f4f4f4;
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+        
+        .medal-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .google-btn {
@@ -133,6 +184,7 @@
             border: none;
             background: none;
             cursor: pointer;
+            margin-top: 5px;
         }
 
         /* Leaderboard */
@@ -172,7 +224,7 @@
 
         .rank-col { width: 30px; font-weight: 700; color: #888; }
         .time-col { text-align: right; font-weight: 700; font-family: monospace; }
-        .name-col { display: flex; align-items: center; gap: 8px; }
+        .name-col { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 
         /* --- Game UI (Hidden initially) --- */
         .game-ui {
@@ -409,7 +461,20 @@
 
         .modal h2 {
             font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        
+        .medal-reveal {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            animation: popIn 0.5s ease-out;
+        }
+        
+        .medal-text {
+            font-size: 1.1rem;
+            font-weight: 600;
             margin-bottom: 20px;
+            color: #555;
         }
 
         .modal-stats {
@@ -421,6 +486,12 @@
             font-weight: 700;
             color: var(--text-color);
             margin-top: 5px;
+        }
+        
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); }
         }
 
         /* Responsive Design */
@@ -468,9 +539,20 @@
                 </svg>
                 Sign in with Google
             </button>
-            <div id="user-display" class="user-info hidden" style="display:none;">
+            
+            <div id="user-display" class="user-edit-container hidden" style="display:none;">
                 <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
-                <span id="user-name">User</span>
+                
+                <label class="input-label">Leaderboard Name</label>
+                <input type="text" id="nickname-input" class="nickname-input" maxlength="15" placeholder="Enter Name">
+                
+                <!-- Medal Counts -->
+                <div id="medal-counts" class="medal-counts" style="display:none;">
+                    <div class="medal-item">🥇 <span id="gold-count">0</span></div>
+                    <div class="medal-item">🥈 <span id="silver-count">0</span></div>
+                    <div class="medal-item">🥉 <span id="bronze-count">0</span></div>
+                </div>
+
                 <button id="sign-out-btn" class="sign-out-btn">Sign Out</button>
             </div>
         </div>
@@ -542,6 +624,10 @@
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal">
             <h2>Puzzle Solved!</h2>
+            
+            <div id="modal-medal-icon" class="medal-reveal">🥇</div>
+            <div id="modal-medal-text" class="medal-text">You got the Gold Medal!</div>
+
             <div class="modal-stats">
                 <p>Your Time</p>
                 <div class="final-time" id="final-time">00:00</div>
