@@ -1,20 +1,20 @@
 import { dailyPuzzle } from './puzzle-data.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    query, 
-    where, 
-    orderBy, 
-    limit, 
-    getDocs, 
-    doc, 
-    getDoc, 
+import {
+    getFirestore,
+    collection,
+    addDoc,
+    query,
+    where,
+    orderBy,
+    limit,
+    getDocs,
+    doc,
+    getDoc,
     setDoc,
     updateDoc,
-    increment 
+    increment
 } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
 // --- Configuration ---
@@ -43,7 +43,7 @@ let currentUser = null;
 let currentGrid = Array(5).fill().map(() => Array(5).fill(''));
 let activeRow = 0;
 let activeCol = 0;
-let direction = 'across'; 
+let direction = 'across';
 let timerInterval = null;
 let startTime = null;
 let finalSeconds = 0;
@@ -59,7 +59,6 @@ const boardEl = document.getElementById('game-board');
 const acrossCluesList = document.getElementById('across-clues');
 const downCluesList = document.getElementById('down-clues');
 const activeClueText = document.getElementById('active-clue-text');
-const clueDirectionLabel = document.getElementById('clue-direction-label'); // New element
 const timerEl = document.getElementById('timer');
 const currentDateEl = document.getElementById('current-date');
 const modal = document.getElementById('modal-overlay');
@@ -73,7 +72,6 @@ const userAvatar = document.getElementById('user-avatar');
 const signOutBtn = document.getElementById('sign-out-btn');
 const leaderboardBody = document.getElementById('leaderboard-body');
 const nicknameInput = document.getElementById('nickname-input');
-// New Elements
 const medalCountsEl = document.getElementById('medal-counts');
 const goldCountEl = document.getElementById('gold-count');
 const silverCountEl = document.getElementById('silver-count');
@@ -82,12 +80,17 @@ const modalMedalIcon = document.getElementById('modal-medal-icon');
 const modalMedalText = document.getElementById('modal-medal-text');
 
 // Mobile Keyboard Proxy
+// We position this off-screen but keep it part of the DOM to capture input
 const inputProxy = document.createElement('input');
 inputProxy.type = 'text';
-inputProxy.style.position = 'fixed'; // Changed to fixed to prevent scroll jumping
-inputProxy.style.top = '-1000px'; // Move off screen
+inputProxy.style.position = 'absolute';
 inputProxy.style.opacity = '0';
-inputProxy.style.fontSize = '16px'; 
+inputProxy.style.top = '-1000px';
+inputProxy.style.left = '-1000px';
+inputProxy.autocomplete = 'off'; 
+inputProxy.autocorrect = 'off';
+inputProxy.autocapitalize = 'none';
+inputProxy.spellcheck = 'false';
 document.body.appendChild(inputProxy);
 
 // --- 1. Authentication & Profile Logic ---
@@ -158,7 +161,7 @@ onAuthStateChanged(auth, async (user) => {
     } else {
         googleLoginBtn.style.display = 'flex';
         userDisplay.style.display = 'none';
-        medalCountsEl.style.display = 'none'; // Hide medals if logged out
+        medalCountsEl.style.display = 'none';
         nicknameInput.value = '';
     }
 });
@@ -246,7 +249,7 @@ async function updateUserMedals(medalType) {
         await updateDoc(userRef, {
             [`medals.${medalType}`]: increment(1)
         });
-        
+
         // Update local UI immediately for immediate feedback on restart
         const countEl = document.getElementById(`${medalType}-count`);
         if(countEl) countEl.textContent = parseInt(countEl.textContent) + 1;
@@ -268,7 +271,7 @@ async function saveScore(medal) {
             timeInSeconds: finalSeconds,
             timeString: finalTimeEl.textContent,
             date: todayStr,
-            medal: medal, // Save which medal they got with this specific score
+            medal: medal,
             realName: currentUser.displayName,
             email: currentUser.email,
             timestamp: new Date()
@@ -280,10 +283,33 @@ async function saveScore(medal) {
 
 // --- 3. Game Logic ---
 
+function setupMobileViewport() {
+    // This handles the squishing of the UI when the keyboard opens on mobile
+    if (window.visualViewport) {
+        const handleResize = () => {
+            if (!gameUI.classList.contains('visible')) return;
+            
+            // Set the height of the game container to the visible viewport height
+            // This forces the "bottom" clue bar to sit right on top of the keyboard
+            gameUI.style.height = `${window.visualViewport.height}px`;
+            
+            // Force scroll to top to prevent the header from scrolling off
+            window.scrollTo(0, 0);
+        };
+
+        window.visualViewport.addEventListener('resize', handleResize);
+        window.visualViewport.addEventListener('scroll', () => window.scrollTo(0, 0));
+    }
+}
+
 function initApp() {
     const todayStr = getTodayString();
     startDateDisplay.textContent = todayStr;
     currentDateEl.textContent = todayStr;
+    
+    // Initialize the viewport listener
+    setupMobileViewport();
+    
     fetchLeaderboard();
 }
 
@@ -304,10 +330,9 @@ function startGame() {
     findStartingCell();
     updateHighlights();
     startTimer();
-    // Delay focus slightly to ensure transition is done
-    setTimeout(() => {
-        focusInput();
-    }, 100);
+    
+    // Force focus and trigger the keyboard on mobile
+    inputProxy.focus();
 }
 
 function findStartingCell() {
@@ -350,7 +375,7 @@ function renderBoard() {
                 cell.appendChild(contentSpan);
 
                 cell.addEventListener('mousedown', (e) => {
-                    e.preventDefault();
+                    e.preventDefault(); // Prevent default focus stealing behavior
                     handleCellClick(r, c);
                 });
             }
@@ -408,18 +433,17 @@ function startTimer() {
 
 function stopTimer() {
     clearInterval(timerInterval);
-    isGameActive = false; 
+    isGameActive = false;
 }
 
 function focusInput() {
-    // Keep focus on the proxy input so keyboard stays open
     inputProxy.value = '';
     inputProxy.focus();
 }
 
 inputProxy.addEventListener('input', (e) => {
     if (isGameFinished) return;
-    
+
     const char = e.target.value.slice(-1).toUpperCase();
     if (/[A-Z]/.test(char)) {
         currentGrid[activeRow][activeCol] = char;
@@ -432,7 +456,7 @@ inputProxy.addEventListener('input', (e) => {
 
 inputProxy.addEventListener('keydown', (e) => {
     if (isGameFinished) return;
-    
+
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault();
     }
@@ -491,7 +515,7 @@ function moveFocus(step) {
     let r = activeRow;
     let c = activeCol;
     let loops = 0;
-    
+
     while(loops < 10) {
         if (direction === 'across') {
             c += step;
@@ -520,9 +544,10 @@ function updateBoardUI() {
     for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 5; c++) {
             if(dailyPuzzle.solution[r][c] === '#') continue;
-            const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"] .cell-content`);
-            cell.textContent = currentGrid[r][c];
+            const cellContent = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"] .cell-content`);
+            cellContent.textContent = currentGrid[r][c];
             
+            // Add a class to styling if needed for filled cells
             const cellDiv = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
             if(currentGrid[r][c]) cellDiv.classList.add('filled');
             else cellDiv.classList.remove('filled');
@@ -531,24 +556,21 @@ function updateBoardUI() {
 }
 
 function updateHighlights() {
+    // Clear previous highlights
     document.querySelectorAll('.cell').forEach(c => {
         c.classList.remove('active', 'highlight-word');
     });
     document.querySelectorAll('.clue-item').forEach(c => c.classList.remove('active'));
 
+    // Highlight Active Cell
     const activeCell = document.querySelector(`.cell[data-row="${activeRow}"][data-col="${activeCol}"]`);
-    if (activeCell) {
-        activeCell.classList.add('active');
-        // Ensure active cell is visible on mobile when keyboard is up
-        if (window.innerWidth <= 768) {
-            activeCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    }
+    if (activeCell) activeCell.classList.add('active');
 
     let wordStartRow = activeRow;
     let wordStartCol = activeCol;
     const solution = dailyPuzzle.solution;
 
+    // Highlight Word and Update Clue Text
     if (direction === 'across') {
         while(wordStartCol > 0 && solution[wordStartRow][wordStartCol - 1] !== '#') {
             wordStartCol--;
@@ -577,18 +599,17 @@ function updateHighlights() {
 function activateClue(clueObj, type) {
     if (!clueObj) return;
     
-    // Desktop: Scroll list
+    // 1. Update Desktop List
     const clueItem = document.getElementById(`clue-${type}-${clueObj.number}`);
     if (clueItem) {
         clueItem.classList.add('active');
         clueItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-
-    // Mobile: Update Bottom Bar
-    if (clueDirectionLabel) {
-        clueDirectionLabel.textContent = type.toUpperCase();
-    }
-    activeClueText.innerHTML = `<strong>${clueObj.number}</strong> ${clueObj.text}`;
+    
+    // 2. Update Mobile Clue Bar
+    // We display the direction arrow to match typical crossword apps
+    const arrow = type === 'across' ? '➡' : '⬇';
+    activeClueText.innerHTML = `<strong>${clueObj.number}${arrow}</strong> ${clueObj.text}`;
 }
 
 function checkWin() {
@@ -614,7 +635,7 @@ function gameWon() {
     isGameFinished = true;
     stopTimer();
     finalTimeEl.textContent = timerEl.textContent;
-    
+
     // Process Medal & Save
     processWin();
 
@@ -625,8 +646,15 @@ function gameWon() {
 
 document.addEventListener('click', (e) => {
     if (!startScreen.classList.contains('hidden')) return;
-    if (!modal.contains(e.target) && !e.target.classList.contains('primary-btn') && !e.target.classList.contains('nickname-input')) {
-        if(isGameActive && !isGameFinished) inputProxy.focus();
+    
+    // If user clicks outside the modal or buttons, ensure keyboard stays active on mobile
+    if (!modal.contains(e.target) && 
+        !e.target.classList.contains('primary-btn') && 
+        !e.target.classList.contains('nickname-input')) {
+        
+        if(isGameActive && !isGameFinished) {
+            inputProxy.focus();
+        }
     }
 });
 
@@ -640,4 +668,5 @@ restartBtn.addEventListener('click', () => {
     }, 500);
 });
 
+// Start the app
 initApp();
