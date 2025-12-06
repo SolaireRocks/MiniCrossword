@@ -1,4 +1,4 @@
-const dailyPuzzle = {
+export const dailyPuzzle = {
     // 5x5 Grid Solution
     // '#' represents a black square
     solution: [
@@ -10,7 +10,6 @@ const dailyPuzzle = {
     ],
 
     // The small numbers displayed in the corners of cells
-    // 0 indicates no number
     gridNumbers: [
         [0, 0, 1, 2, 3],
         [0, 4, 0, 0, 0],
@@ -20,7 +19,6 @@ const dailyPuzzle = {
     ],
 
     // Clues mapped with their starting position (row, col)
-    // This is essential for grids with black squares
     clues: {
         across: [
             { number: 1, text: "Beaver's barrier", row: 0, col: 2 },
