@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Mini Crossword</title>
+    <!-- Google Fonts for a modern look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #000;
+            --highlight-blue: #a7d8ff;
+            --highlight-yellow: #ffda00;
+            --border-color: #333;
+            --bg-color: #fff;
+            --text-color: #121212;
+            --clue-bg: #f8f8f8;
+            --cell-size: 60px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Start Screen --- */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            transition: opacity 0.3s ease-out, visibility 0.3s;
+        }
+
+        .start-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .logo-mark {
+            font-size: 6rem;
+            line-height: 1;
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #000, #333);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .start-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .start-date {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 50px;
+            font-weight: 500;
+        }
+
+        /* --- Game UI (Hidden initially) --- */
+        .game-ui {
+            opacity: 0;
+            transition: opacity 0.5s ease-in;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-ui.visible {
+            opacity: 1;
+        }
+
+        /* Header */
+        header {
+            width: 100%;
+            max-width: 900px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .header-left h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .date {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .timer-container {
+            font-family: 'Inter', monospace;
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: #eee;
+            padding: 8px 16px;
+            border-radius: 20px;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        /* Main Layout */
+        .game-layout {
+            display: flex;
+            flex-direction: row; /* Side by side on desktop */
+            gap: 40px;
+            padding: 20px;
+            max-width: 1000px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        /* Game Board */
+        .board-container {
+            flex-shrink: 0;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(5, var(--cell-size));
+            grid-template-rows: repeat(5, var(--cell-size));
+            gap: 0;
+            border: 2px solid var(--primary-color);
+            background: var(--primary-color); /* Grid lines color */
+        }
+
+        .cell {
+            background-color: white;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        .cell.black {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            cursor: default;
+        }
+
+        .cell-number {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #333;
+            pointer-events: none;
+        }
+
+        /* Highlighting States */
+        .cell.highlight-word {
+            background-color: var(--highlight-blue);
+        }
+
+        .cell.active {
+            background-color: var(--highlight-yellow);
+        }
+
+        /* Clues Section */
+        .clues-container {
+            flex-grow: 1;
+            display: flex;
+            gap: 30px;
+            max-width: 500px;
+        }
+
+        .clue-column {
+            flex: 1;
+        }
+
+        .clue-column h3 {
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .clue-list {
+            list-style: none;
+        }
+
+        .clue-item {
+            padding: 8px 10px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            transition: background 0.2s;
+        }
+
+        .clue-item strong {
+            margin-right: 8px;
+            font-weight: 700;
+        }
+
+        .clue-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .clue-item.active {
+            background-color: var(--highlight-blue);
+        }
+
+        /* Mobile Clue Bar */
+        .current-clue-bar {
+            display: none; /* Hidden on desktop */
+            width: 100%;
+            background: var(--highlight-blue);
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        /* Buttons */
+        .primary-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+        }
+
+        .primary-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .big-btn {
+            font-size: 1.2rem;
+            padding: 18px 50px;
+        }
+
+        /* Victory Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            border: 1px solid #eee;
+            min-width: 300px;
+            transform: translateY(0);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.hidden .modal {
+            transform: translateY(20px);
+        }
+
+        .modal h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        .modal-stats {
+            margin-bottom: 30px;
+        }
+
+        .final-time {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-top: 5px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            :root {
+                --cell-size: 13vw;
+            }
+
+            .game-layout {
+                flex-direction: column;
+                align-items: center;
+                padding-top: 0;
+            }
+
+            .clues-container {
+                display: none;
+            }
+
+            .current-clue-bar {
+                display: block;
+            }
+            
+            .start-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="start-screen">
+        <div class="logo-mark">M</div>
+        <h1 class="start-title">The Daily Mini</h1>
+        <p class="start-date" id="start-date-display">Today</p>
+        <button id="start-btn" class="primary-btn big-btn">Start Puzzle</button>
+    </div>
+
+    <!-- Game UI (Initially Hidden) -->
+    <div id="game-ui" class="game-ui">
+        <header>
+            <div class="header-left">
+                <h1>The Mini</h1>
+                <p class="date" id="current-date">Today</p>
+            </div>
+            <div class="timer-container">
+                <span id="timer">00:00</span>
+            </div>
+        </header>
+
+        <!-- Current Clue Bar (Mobile/Tablet view) -->
+        <div class="current-clue-bar" id="current-clue-bar">
+            <span id="active-clue-text">Select a cell to start</span>
+        </div>
+
+        <main class="game-layout">
+            <!-- The Grid -->
+            <div class="board-container">
+                <div id="game-board" class="game-board">
+                    <!-- Grid cells generated by JS -->
+                </div>
+            </div>
+
+            <!-- Clues Section (Desktop View) -->
+            <div class="clues-container">
+                <div class="clue-column">
+                    <h3>Across</h3>
+                    <ul id="across-clues" class="clue-list">
+                        <!-- Clues generated by JS -->
+                    </ul>
+                </div>
+                <div class="clue-column">
+                    <h3>Down</h3>
+                    <ul id="down-clues" class="clue-list">
+                        <!-- Clues generated by JS -->
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Victory Modal -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Puzzle Solved!</h2>
+            <div class="modal-stats">
+                <p>Your Time</p>
+                <div class="final-time" id="final-time">00:00</div>
+            </div>
+            <button id="restart-btn" class="primary-btn">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Load Scripts -->
+    <script src="puzzle-data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
