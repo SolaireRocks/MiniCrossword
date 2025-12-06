@@ -1,3 +1,4 @@
+// puzzle-data.js
 export const dailyPuzzle = {
     // 5x5 Grid Solution
     // '#' represents a black square

@@ -59,6 +59,7 @@ const boardEl = document.getElementById('game-board');
 const acrossCluesList = document.getElementById('across-clues');
 const downCluesList = document.getElementById('down-clues');
 const activeClueText = document.getElementById('active-clue-text');
+const clueDirectionLabel = document.getElementById('clue-direction-label'); // New element
 const timerEl = document.getElementById('timer');
 const currentDateEl = document.getElementById('current-date');
 const modal = document.getElementById('modal-overlay');
@@ -83,10 +84,9 @@ const modalMedalText = document.getElementById('modal-medal-text');
 // Mobile Keyboard Proxy
 const inputProxy = document.createElement('input');
 inputProxy.type = 'text';
-inputProxy.style.position = 'absolute';
+inputProxy.style.position = 'fixed'; // Changed to fixed to prevent scroll jumping
+inputProxy.style.top = '-1000px'; // Move off screen
 inputProxy.style.opacity = '0';
-inputProxy.style.height = '0';
-inputProxy.style.width = '0';
 inputProxy.style.fontSize = '16px'; 
 document.body.appendChild(inputProxy);
 
@@ -304,7 +304,10 @@ function startGame() {
     findStartingCell();
     updateHighlights();
     startTimer();
-    inputProxy.focus();
+    // Delay focus slightly to ensure transition is done
+    setTimeout(() => {
+        focusInput();
+    }, 100);
 }
 
 function findStartingCell() {
@@ -409,6 +412,7 @@ function stopTimer() {
 }
 
 function focusInput() {
+    // Keep focus on the proxy input so keyboard stays open
     inputProxy.value = '';
     inputProxy.focus();
 }
@@ -533,7 +537,13 @@ function updateHighlights() {
     document.querySelectorAll('.clue-item').forEach(c => c.classList.remove('active'));
 
     const activeCell = document.querySelector(`.cell[data-row="${activeRow}"][data-col="${activeCol}"]`);
-    if (activeCell) activeCell.classList.add('active');
+    if (activeCell) {
+        activeCell.classList.add('active');
+        // Ensure active cell is visible on mobile when keyboard is up
+        if (window.innerWidth <= 768) {
+            activeCell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
 
     let wordStartRow = activeRow;
     let wordStartCol = activeCol;
@@ -566,10 +576,17 @@ function updateHighlights() {
 
 function activateClue(clueObj, type) {
     if (!clueObj) return;
+    
+    // Desktop: Scroll list
     const clueItem = document.getElementById(`clue-${type}-${clueObj.number}`);
     if (clueItem) {
         clueItem.classList.add('active');
         clueItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Mobile: Update Bottom Bar
+    if (clueDirectionLabel) {
+        clueDirectionLabel.textContent = type.toUpperCase();
     }
     activeClueText.innerHTML = `<strong>${clueObj.number}</strong> ${clueObj.text}`;
 }
