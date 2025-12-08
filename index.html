@@ -452,6 +452,12 @@
             color: #333;
         }
 
+        /* Spacer for Mobile Keyboards */
+        .keyboard-spacer {
+            height: 0;
+            width: 100%;
+        }
+
         /* Victory Modal */
         .modal-overlay {
             position: fixed;
@@ -562,6 +568,11 @@
             .start-title {
                 font-size: 2rem;
             }
+            
+            /* Add space on mobile to allow scrolling above keyboard */
+            .keyboard-spacer {
+                height: 45vh;
+            }
         }
     </style>
 </head>
@@ -651,6 +662,9 @@
 
                 <!-- Give Up Button -->
                 <button id="give-up-btn" class="secondary-btn">Give Up</button>
+                
+                <!-- Spacer for Mobile Keyboards -->
+                <div class="keyboard-spacer"></div>
             </div>
 
             <!-- Clues Section (Desktop View) -->

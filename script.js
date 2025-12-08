@@ -59,6 +59,7 @@ const boardEl = document.getElementById('game-board');
 const acrossCluesList = document.getElementById('across-clues');
 const downCluesList = document.getElementById('down-clues');
 const activeClueText = document.getElementById('active-clue-text');
+const currentClueBar = document.getElementById('current-clue-bar'); // Mobile clue bar
 const timerEl = document.getElementById('timer');
 const currentDateEl = document.getElementById('current-date');
 const modal = document.getElementById('modal-overlay');
@@ -526,17 +527,22 @@ inputProxy.addEventListener('keydown', (e) => {
     }
 });
 
+// Helper: Mobile Scroll Logic
+function scrollToMobileClue() {
+    if (window.innerWidth <= 768 && currentClueBar) {
+        currentClueBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
 function handleCellClick(r, c) {
     let shouldCheckEmpty = false;
     
     if (activeRow === r && activeCol === c) {
-        // Toggle direction if clicking active cell
         direction = direction === 'across' ? 'down' : 'across';
         shouldCheckEmpty = true;
     } else {
         activeRow = r;
         activeCol = c;
-        // Check empty only if the user clicks a cell that is already filled
         if (currentGrid[r][c] !== '') {
             shouldCheckEmpty = true;
         }
@@ -550,6 +556,11 @@ function handleCellClick(r, c) {
 
     updateHighlights();
     focusInput();
+
+    // Scroll to clue after delay (allowing keyboard animation to start)
+    if (window.innerWidth <= 768) {
+        setTimeout(scrollToMobileClue, 300);
+    }
 }
 
 function navigate(rowDelta, colDelta) {
@@ -569,13 +580,11 @@ function navigate(rowDelta, colDelta) {
     }
 }
 
-// Updated MoveFocus to skip filled cells when typing (moving forward)
 function moveFocus(step) {
     let r = activeRow;
     let c = activeCol;
     let found = false;
     
-    // Safety loop to find next valid cell
     let moves = 0;
     while (moves < 26) {
         if (direction === 'across') {
@@ -594,7 +603,6 @@ function moveFocus(step) {
         moves++;
 
         if (dailyPuzzle.solution[r][c] !== '#') {
-            // If moving forward (typing), look for EMPTY cell
             if (step > 0) {
                 if (currentGrid[r][c] === '') {
                     activeRow = r;
@@ -603,7 +611,6 @@ function moveFocus(step) {
                     break;
                 }
             } 
-            // If moving backward (backspace), just stop at first valid cell
             else {
                 activeRow = r;
                 activeCol = c;
@@ -613,8 +620,6 @@ function moveFocus(step) {
         }
     }
 
-    // Fallback: If no empty cell found forward (grid full or wrapped),
-    // we must move to immediate next cell so cursor isn't stuck.
     if (step > 0 && !found) {
         simpleMove(1);
     } else {
@@ -709,6 +714,9 @@ function activateClue(clueObj, type) {
         clueItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     activeClueText.innerHTML = `<strong>${clueObj.number}</strong> ${clueObj.text}`;
+
+    // Ensure mobile clue is visible when clue changes
+    scrollToMobileClue();
 }
 
 function checkWin() {
