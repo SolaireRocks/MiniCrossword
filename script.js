@@ -527,9 +527,21 @@ inputProxy.addEventListener('keydown', (e) => {
     }
 });
 
-// Helper: Mobile Scroll Logic
+// Helper: Mobile Scroll Logic (Guard against jitter)
 function scrollToMobileClue() {
-    if (window.innerWidth <= 768 && currentClueBar) {
+    // Only on mobile and if element exists
+    if (window.innerWidth > 768 || !currentClueBar) return;
+
+    const rect = currentClueBar.getBoundingClientRect();
+    
+    // Check if element is already fully visible in the current viewport
+    const isVisible = (
+        rect.top >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
+    );
+
+    // Only scroll if it's NOT visible
+    if (!isVisible) {
         currentClueBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }
@@ -715,7 +727,7 @@ function activateClue(clueObj, type) {
     }
     activeClueText.innerHTML = `<strong>${clueObj.number}</strong> ${clueObj.text}`;
 
-    // Ensure mobile clue is visible when clue changes
+    // Ensure mobile clue is visible when clue changes (using guard clause)
     scrollToMobileClue();
 }
 
