@@ -84,13 +84,17 @@ const modalMedalIcon = document.getElementById('modal-medal-icon');
 const modalMedalText = document.getElementById('modal-medal-text');
 
 // Mobile Keyboard Proxy
+// Updated: Position fixed at top-left to prevent viewport jumps
 const inputProxy = document.createElement('input');
 inputProxy.type = 'text';
-inputProxy.style.position = 'absolute';
+inputProxy.style.position = 'fixed';
+inputProxy.style.top = '0px';
+inputProxy.style.left = '0px';
 inputProxy.style.opacity = '0';
 inputProxy.style.height = '0';
 inputProxy.style.width = '0';
 inputProxy.style.fontSize = '16px'; 
+inputProxy.style.pointerEvents = 'none'; // Ensure it doesn't block clicks
 document.body.appendChild(inputProxy);
 
 // --- 1. Authentication & Profile Logic ---
@@ -309,7 +313,7 @@ function startGame() {
     findStartingCell();
     updateHighlights();
     startTimer();
-    inputProxy.focus();
+    focusInput(); // Uses updated focus logic
 }
 
 function giveUp() {
@@ -478,7 +482,8 @@ function stopTimer() {
 
 function focusInput() {
     inputProxy.value = '';
-    inputProxy.focus();
+    // Prevent scroll keeps the viewport steady on iOS
+    inputProxy.focus({ preventScroll: true });
 }
 
 inputProxy.addEventListener('input', (e) => {
@@ -527,25 +532,6 @@ inputProxy.addEventListener('keydown', (e) => {
     }
 });
 
-// Helper: Mobile Scroll Logic (Guard against jitter)
-function scrollToMobileClue() {
-    // Only on mobile and if element exists
-    if (window.innerWidth > 768 || !currentClueBar) return;
-
-    const rect = currentClueBar.getBoundingClientRect();
-    
-    // Check if element is already fully visible in the current viewport
-    const isVisible = (
-        rect.top >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
-    );
-
-    // Only scroll if it's NOT visible
-    if (!isVisible) {
-        currentClueBar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-}
-
 function handleCellClick(r, c) {
     let shouldCheckEmpty = false;
     
@@ -568,11 +554,6 @@ function handleCellClick(r, c) {
 
     updateHighlights();
     focusInput();
-
-    // Scroll to clue after delay (allowing keyboard animation to start)
-    if (window.innerWidth <= 768) {
-        setTimeout(scrollToMobileClue, 300);
-    }
 }
 
 function navigate(rowDelta, colDelta) {
@@ -726,9 +707,6 @@ function activateClue(clueObj, type) {
         clueItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
     activeClueText.innerHTML = `<strong>${clueObj.number}</strong> ${clueObj.text}`;
-
-    // Ensure mobile clue is visible when clue changes (using guard clause)
-    scrollToMobileClue();
 }
 
 function checkWin() {
@@ -781,7 +759,7 @@ function gameWon() {
 document.addEventListener('click', (e) => {
     if (!startScreen.classList.contains('hidden')) return;
     if (!modal.contains(e.target) && !e.target.classList.contains('primary-btn') && !e.target.classList.contains('nickname-input') && !e.target.classList.contains('secondary-btn')) {
-        if(isGameActive && !isGameFinished) inputProxy.focus();
+        if(isGameActive && !isGameFinished) focusInput();
     }
 });
 

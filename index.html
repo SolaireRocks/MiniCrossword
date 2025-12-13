@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- interactive-widget=resizes-content forces iOS Safari to resize the view when keyboard opens -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
     <title>Daily Mini Crossword</title>
     <!-- Google Fonts for a modern look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
@@ -32,8 +33,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
+            /* Use dvh (Dynamic Viewport Height) to account for mobile browser bars */
+            height: 100dvh; 
+            width: 100vw;
+            /* Prevent the whole page from scrolling */
+            overflow: hidden; 
         }
 
         /* --- Start Screen --- */
@@ -42,7 +46,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100vh;
+            height: 100dvh;
             background-color: var(--bg-color);
             display: flex;
             flex-direction: column;
@@ -51,7 +55,8 @@
             z-index: 200;
             transition: opacity 0.3s ease-out, visibility 0.3s;
             padding: 20px;
-            overflow-y: auto;
+            /* Allow scrolling ONLY inside the start screen content if needed (e.g. leaderboard) */
+            overflow-y: auto; 
         }
 
         .start-screen.hidden {
@@ -195,6 +200,7 @@
             margin-top: 30px;
             border-top: 1px solid #eee;
             padding-top: 20px;
+            padding-bottom: 50px; /* Extra space for scrolling */
         }
 
         .leaderboard-container h3 {
@@ -232,9 +238,11 @@
             opacity: 0;
             transition: opacity 0.5s ease-in;
             width: 100%;
+            height: 100%; /* Fill the 100dvh body */
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow: hidden; /* No scrolling on the main container */
         }
 
         .game-ui.visible {
@@ -245,16 +253,16 @@
         header {
             width: 100%;
             max-width: 900px;
-            padding: 20px;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #eee;
-            margin-bottom: 20px;
+            flex-shrink: 0; /* Header never shrinks */
         }
 
         .header-left h1 {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
             letter-spacing: -1px;
         }
@@ -284,7 +292,9 @@
             padding: 20px;
             max-width: 1000px;
             width: 100%;
+            height: 100%;
             justify-content: center;
+            overflow: hidden; /* Prevent layout scroll */
         }
 
         /* Game Board */
@@ -293,6 +303,8 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            /* Allow vertical centering if space permits */
+            justify-content: flex-start; 
         }
 
         .game-board {
@@ -316,6 +328,7 @@
             font-weight: 700;
             text-transform: uppercase;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .cell.black {
@@ -370,6 +383,8 @@
             display: flex;
             gap: 30px;
             max-width: 500px;
+            overflow-y: auto; /* Allow clues to scroll independently */
+            padding-right: 10px;
         }
 
         .clue-column {
@@ -382,6 +397,9 @@
             border-bottom: 1px solid #ddd;
             padding-bottom: 8px;
             margin-bottom: 12px;
+            position: sticky;
+            top: 0;
+            background: #fff;
         }
 
         .clue-list {
@@ -435,7 +453,7 @@
         }
 
         .secondary-btn {
-            margin-top: 20px;
+            margin-top: 10px;
             background: transparent;
             border: 2px solid #e0e0e0;
             color: #777;
@@ -454,8 +472,7 @@
 
         /* Spacer for Mobile Keyboards */
         .keyboard-spacer {
-            height: 0;
-            width: 100%;
+            display: none; /* No longer needed with new layout strategy */
         }
 
         /* Victory Modal */
@@ -464,7 +481,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 100%;
+            height: 100dvh;
             background: rgba(255, 255, 255, 0.9);
             display: flex;
             justify-content: center;
@@ -536,10 +553,20 @@
                 --cell-size: 13vw;
             }
 
+            header {
+                padding: 10px 15px;
+            }
+            
+            .header-left h1 {
+                font-size: 1.5rem;
+            }
+
             .game-layout {
                 flex-direction: column;
                 align-items: center;
-                padding-top: 0;
+                justify-content: flex-start;
+                padding: 10px;
+                gap: 10px;
             }
 
             .clues-container {
@@ -553,25 +580,25 @@
                 justify-content: center;
                 align-items: center;
                 width: 100%;
-                max-width: 90vw; 
-                min-height: 90px;
-                padding: 15px;
+                max-width: 95vw; 
+                min-height: 80px;
+                padding: 10px;
                 background-color: #f7f9fa;
                 border-top: 4px solid var(--highlight-blue);
                 border-radius: 8px;
                 text-align: center;
-                font-size: 1.1rem;
-                line-height: 1.4;
+                font-size: 1rem;
+                line-height: 1.3;
                 color: #333;
+                margin-top: 10px;
             }
             
             .start-title {
                 font-size: 2rem;
             }
             
-            /* Add space on mobile to allow scrolling above keyboard */
-            .keyboard-spacer {
-                height: 45vh;
+            .feedback-message {
+                margin: 5px 0;
             }
         }
     </style>
@@ -663,8 +690,7 @@
                 <!-- Give Up Button -->
                 <button id="give-up-btn" class="secondary-btn">Give Up</button>
                 
-                <!-- Spacer for Mobile Keyboards -->
-                <div class="keyboard-spacer"></div>
+                <!-- Spacer removed: body now handles sizing -->
             </div>
 
             <!-- Clues Section (Desktop View) -->
