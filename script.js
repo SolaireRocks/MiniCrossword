@@ -40,7 +40,10 @@ const googleProvider = new GoogleAuthProvider();
 
 // --- Game State ---
 let currentUser = null;
-let currentGrid = Array(5).fill().map(() => Array(5).fill(''));
+// Dynamic Grid Dimensions
+let numRows = 5; 
+let numCols = 5;
+let currentGrid = []; // Initialized in startGame
 let activeRow = 0;
 let activeCol = 0;
 let direction = 'across'; 
@@ -295,7 +298,17 @@ function initApp() {
 }
 
 function startGame() {
-    currentGrid = Array(5).fill().map(() => Array(5).fill(''));
+    // Determine grid size from puzzle data
+    numRows = dailyPuzzle.solution.length;
+    numCols = dailyPuzzle.solution[0].length;
+
+    // Update CSS variables for grid
+    document.documentElement.style.setProperty('--grid-rows', numRows);
+    document.documentElement.style.setProperty('--grid-cols', numCols);
+
+    // Initialize Grid
+    currentGrid = Array(numRows).fill().map(() => Array(numCols).fill(''));
+    
     isGameActive = false;
     isGameFinished = false;
     clearInterval(timerInterval);
@@ -313,7 +326,7 @@ function startGame() {
     findStartingCell();
     updateHighlights();
     startTimer();
-    focusInput(); // Uses updated focus logic
+    focusInput(); 
 }
 
 function giveUp() {
@@ -325,8 +338,8 @@ function giveUp() {
     stopTimer();
 
     const solution = dailyPuzzle.solution;
-    for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
+    for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
             if (solution[r][c] !== '#') {
                 currentGrid[r][c] = solution[r][c];
             }
@@ -341,8 +354,8 @@ function giveUp() {
 
 function findStartingCell() {
     const solution = dailyPuzzle.solution;
-    for(let r=0; r<5; r++) {
-        for(let c=0; c<5; c++) {
+    for(let r=0; r < numRows; r++) {
+        for(let c=0; c < numCols; c++) {
             if(solution[r][c] !== '#') {
                 activeRow = r;
                 activeCol = c;
@@ -371,14 +384,14 @@ function findFirstEmptyInWord(r, c, dir) {
 
     // 2. Scan forward for empty
     if (dir === 'across') {
-        while (currC < 5 && solution[currR][currC] !== '#') {
+        while (currC < numCols && solution[currR][currC] !== '#') {
             if (currentGrid[currR][currC] === '') {
                 return [currR, currC];
             }
             currC++;
         }
     } else {
-        while (currR < 5 && solution[currR][currC] !== '#') {
+        while (currR < numRows && solution[currR][currC] !== '#') {
             if (currentGrid[currR][currC] === '') {
                 return [currR, currC];
             }
@@ -395,8 +408,8 @@ function renderBoard() {
     const solution = dailyPuzzle.solution;
     const gridNums = dailyPuzzle.gridNumbers;
 
-    for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
+    for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
             cell.dataset.row = r;
@@ -560,12 +573,13 @@ function navigate(rowDelta, colDelta) {
     let r = activeRow + rowDelta;
     let c = activeCol + colDelta;
 
-    if (r >= 0 && r < 5 && c >= 0 && c < 5) {
+    // Check bounds using dynamic rows/cols
+    if (r >= 0 && r < numRows && c >= 0 && c < numCols) {
         if (dailyPuzzle.solution[r][c] === '#') {
             r += rowDelta;
             c += colDelta;
         }
-        if (r >= 0 && r < 5 && c >= 0 && c < 5 && dailyPuzzle.solution[r][c] !== '#') {
+        if (r >= 0 && r < numRows && c >= 0 && c < numCols && dailyPuzzle.solution[r][c] !== '#') {
             activeRow = r;
             activeCol = c;
             updateHighlights();
@@ -578,25 +592,30 @@ function moveFocus(step) {
     let c = activeCol;
     let found = false;
     
+    // Safety break to prevent infinite loops
     let moves = 0;
-    while (moves < 26) {
+    const maxMoves = numRows * numCols; 
+
+    while (moves < maxMoves) {
         if (direction === 'across') {
             c += step;
-            if (c > 4) { c = 0; r++; } 
-            else if (c < 0) { c = 4; r--; }
+            if (c >= numCols) { c = 0; r++; } 
+            else if (c < 0) { c = numCols - 1; r--; }
         } else {
             r += step;
-            if (r > 4) { r = 0; c++; } 
-            else if (r < 0) { r = 4; c--; }
+            if (r >= numRows) { r = 0; c++; } 
+            else if (r < 0) { r = numRows - 1; c--; }
         }
         
-        if(r > 4) r = 0; if(r < 0) r = 4;
-        if(c > 4) c = 0; if(c < 0) c = 4;
+        // Wrap around grid
+        if(r >= numRows) r = 0; if(r < 0) r = numRows - 1;
+        if(c >= numCols) c = 0; if(c < 0) c = numCols - 1;
 
         moves++;
 
         if (dailyPuzzle.solution[r][c] !== '#') {
             if (step > 0) {
+                // If moving forward, stop at empty cell
                 if (currentGrid[r][c] === '') {
                     activeRow = r;
                     activeCol = c;
@@ -605,6 +624,7 @@ function moveFocus(step) {
                 }
             } 
             else {
+                // If backspacing, just stop at previous cell
                 activeRow = r;
                 activeCol = c;
                 found = true;
@@ -624,18 +644,19 @@ function simpleMove(step) {
     let r = activeRow;
     let c = activeCol;
     let loops = 0;
-    while (loops < 10) {
-            if (direction === 'across') {
+    while (loops < (numRows + numCols)) { // heuristic limit
+        if (direction === 'across') {
             c += step;
-            if (c > 4) { c = 0; r++; } 
-            else if (c < 0) { c = 4; r--; }
+            if (c >= numCols) { c = 0; r++; } 
+            else if (c < 0) { c = numCols - 1; r--; }
         } else {
             r += step;
-            if (r > 4) { r = 0; c++; } 
-            else if (r < 0) { r = 4; c--; }
+            if (r >= numRows) { r = 0; c++; } 
+            else if (r < 0) { r = numRows - 1; c--; }
         }
-        if(r > 4) r = 0; if(r < 0) r = 4;
-        if(c > 4) c = 0; if(c < 0) c = 4;
+        
+        if(r >= numRows) r = 0; if(r < 0) r = numRows - 1;
+        if(c >= numCols) c = 0; if(c < 0) c = numCols - 1;
 
         if (dailyPuzzle.solution[r][c] !== '#') {
             activeRow = r;
@@ -648,15 +669,18 @@ function simpleMove(step) {
 }
 
 function updateBoardUI() {
-    for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
+    for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
             if(dailyPuzzle.solution[r][c] === '#') continue;
+            
             const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"] .cell-content`);
-            cell.textContent = currentGrid[r][c];
+            if (cell) cell.textContent = currentGrid[r][c];
             
             const cellDiv = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-            if(currentGrid[r][c]) cellDiv.classList.add('filled');
-            else cellDiv.classList.remove('filled');
+            if (cellDiv) {
+                if(currentGrid[r][c]) cellDiv.classList.add('filled');
+                else cellDiv.classList.remove('filled');
+            }
         }
     }
 }
@@ -679,8 +703,9 @@ function updateHighlights() {
             wordStartCol--;
         }
         let c = wordStartCol;
-        while(c < 5 && solution[wordStartRow][c] !== '#') {
-            document.querySelector(`.cell[data-row="${wordStartRow}"][data-col="${c}"]`).classList.add('highlight-word');
+        while(c < numCols && solution[wordStartRow][c] !== '#') {
+            const el = document.querySelector(`.cell[data-row="${wordStartRow}"][data-col="${c}"]`);
+            if(el) el.classList.add('highlight-word');
             c++;
         }
         const clueObj = dailyPuzzle.clues.across.find(clue => clue.row === wordStartRow && clue.col === wordStartCol);
@@ -690,8 +715,9 @@ function updateHighlights() {
             wordStartRow--;
         }
         let r = wordStartRow;
-        while(r < 5 && solution[r][wordStartCol] !== '#') {
-            document.querySelector(`.cell[data-row="${r}"][data-col="${wordStartCol}"]`).classList.add('highlight-word');
+        while(r < numRows && solution[r][wordStartCol] !== '#') {
+            const el = document.querySelector(`.cell[data-row="${r}"][data-col="${wordStartCol}"]`);
+            if(el) el.classList.add('highlight-word');
             r++;
         }
         const clueObj = dailyPuzzle.clues.down.find(clue => clue.row === wordStartRow && clue.col === wordStartCol);
@@ -714,8 +740,8 @@ function checkWin() {
     let isCorrect = true;
     let errorCount = 0;
 
-    for (let r = 0; r < 5; r++) {
-        for (let c = 0; c < 5; c++) {
+    for (let r = 0; r < numRows; r++) {
+        for (let c = 0; c < numCols; c++) {
             if (dailyPuzzle.solution[r][c] === '#') continue;
             const val = currentGrid[r][c];
             const sol = dailyPuzzle.solution[r][c];

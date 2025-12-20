@@ -18,6 +18,8 @@
             --clue-bg: #f8f8f8;
             --cell-size: 60px;
             --error-color: #d32f2f;
+            --grid-cols: 5; /* Default fallback */
+            --grid-rows: 5; /* Default fallback */
         }
 
         * {
@@ -309,8 +311,9 @@
 
         .game-board {
             display: grid;
-            grid-template-columns: repeat(5, var(--cell-size));
-            grid-template-rows: repeat(5, var(--cell-size));
+            /* Dynamic grid sizing */
+            grid-template-columns: repeat(var(--grid-cols, 5), var(--cell-size));
+            grid-template-rows: repeat(var(--grid-rows, 5), var(--cell-size));
             gap: 0;
             border: 2px solid var(--primary-color);
             background: var(--primary-color); /* Grid lines color */
@@ -550,7 +553,8 @@
         /* Responsive Design */
         @media (max-width: 768px) {
             :root {
-                --cell-size: 13vw;
+                /* Calculate cell size to fit screen width: (100vw - padding) / columns */
+                --cell-size: calc((100vw - 30px) / var(--grid-cols, 5));
             }
 
             header {
